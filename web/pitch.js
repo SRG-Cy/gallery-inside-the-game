@@ -3,7 +3,7 @@ const Pitch = (() => {
   const canvas = document.getElementById("pitch");
   const ctx = canvas.getContext("2d");
   const W = canvas.width, H = canvas.height, S = W / 105;
-  const TEAM = { NOR: "#4ea6ff", HAR: "#ffcb47" };
+  const TEAM = { NOR: "#2f8bff", HAR: "#ffc21a" };
   let recent = [];
   let evidence = [];
   let evidenceUntil = 0;
@@ -13,15 +13,15 @@ const Pitch = (() => {
 
   function field() {
     const base = ctx.createLinearGradient(0, 0, 0, H);
-    base.addColorStop(0, "#1f6b45");
-    base.addColorStop(1, "#18573a");
+    base.addColorStop(0, "#247a48");
+    base.addColorStop(1, "#1b6a3c");
     ctx.fillStyle = base;
     ctx.fillRect(0, 0, W, H);
-    for (let i = 0; i < 14; i += 2) {
-      ctx.fillStyle = "rgba(255,255,255,0.035)";
-      ctx.fillRect((W / 14) * i, 0, W / 14, H);
+    for (let i = 0; i < 18; i += 2) {
+      ctx.fillStyle = "rgba(255,255,255,0.06)";
+      ctx.fillRect((W / 18) * i, 0, W / 18, H);
     }
-    ctx.strokeStyle = "rgba(255,255,255,.6)";
+    ctx.strokeStyle = "rgba(255,255,255,.85)";
     ctx.lineWidth = 2.5;
     ctx.strokeRect(px(1.5), py(1.5), px(102), py(65));
     ctx.beginPath(); ctx.moveTo(px(52.5), py(1.5)); ctx.lineTo(px(52.5), py(66.5)); ctx.stroke();
@@ -72,15 +72,15 @@ const Pitch = (() => {
       ctx.beginPath(); ctx.arc(bx, by, 9, 0, Math.PI * 2); ctx.fill();
       ctx.shadowBlur = 0;
       if (last.player_name) {
-        ctx.font = "700 24px Archivo, sans-serif";
+        ctx.font = "italic 900 30px Archivo, sans-serif";
         const label = last.player_name;
-        const w = ctx.measureText(label).width + 26;
+        const w = ctx.measureText(label.toUpperCase()).width + 30;
         const lx = Math.min(Math.max(bx - w / 2, 10), W - w - 10), ly = Math.max(by - 54, 10);
         ctx.fillStyle = "rgba(8,12,22,.88)";
-        ctx.beginPath(); ctx.roundRect(lx, ly, w, 36, 8); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(lx, ly, w, 42, 4); ctx.fill();
         ctx.fillStyle = TEAM[last.team] || "#fff";
-        ctx.beginPath(); ctx.roundRect(lx, ly, 6, 36, [8, 0, 0, 8]); ctx.fill();
-        ctx.fillStyle = "#fff"; ctx.fillText(label, lx + 16, ly + 26);
+        ctx.beginPath(); ctx.roundRect(lx, ly, 8, 42, [4, 0, 0, 4]); ctx.fill();
+        ctx.fillStyle = "#fff"; ctx.fillText(label.toUpperCase(), lx + 18, ly + 31);
       }
     }
     if (performance.now() < evidenceUntil) {

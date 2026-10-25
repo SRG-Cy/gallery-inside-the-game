@@ -1,7 +1,8 @@
 // Producer console: one WebSocket for state, REST for producer actions.
 const $ = (id) => document.getElementById(id);
 const TEAM_NAME = { NOR: "Northgate FC", HAR: "Harbour Athletic" };
-const TEAM_COLOR = { NOR: "#4ea6ff", HAR: "#ffcb47" };
+const TEAM_COLOR = { NOR: "#2f8bff", HAR: "#ffc21a" };
+const TEAM_COLOR_2 = { NOR: "#38e1ff", HAR: "#ff7a1a" };
 const svg = (path) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
 const ICON = {
   goal: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/>'),
@@ -136,7 +137,7 @@ function drawWorm() {
   ctx.fillText("HT", x(2700) + 6, 20);
   const pts = state.worm;
   if (pts.length > 1) {
-    for (const [sign, color] of [[1, "78,166,255"], [-1, "255,203,71"]]) {
+    for (const [sign, color] of [[1, "47,139,255"], [-1, "255,194,26"]]) {
       ctx.save();
       ctx.beginPath();
       ctx.rect(0, sign > 0 ? 0 : mid, W, mid);
@@ -163,7 +164,7 @@ function drawWorm() {
     const gx = x(g.t), gy = g.team === "NOR" ? 14 : H - 14;
     ctx.fillStyle = TEAM_COLOR[g.team];
     ctx.beginPath(); ctx.arc(gx, gy, 7, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "#0d1424"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = "#060a14"; ctx.lineWidth = 2; ctx.stroke();
   }
 }
 
@@ -172,24 +173,28 @@ function showOverlay(item, teamCode) {
   const el = document.createElement("div");
   el.className = `ov ov-${o.kind}`;
   el.style.setProperty("--team", TEAM_COLOR[teamCode] || TEAM_COLOR.NOR);
-  const kicker = `<div class="ov-kicker">${esc(TEAM_NAME[teamCode] || "Gallery insight")}</div>`;
+  el.style.setProperty("--team-2", TEAM_COLOR_2[teamCode] || TEAM_COLOR_2.NOR);
+  const tab = `<div class="ov-tab">${esc(TEAM_NAME[teamCode] || "Gallery insight")}</div>`;
   if (o.kind === "lower_third") {
-    el.innerHTML = `<div class="stripe"></div><div class="txt">${kicker}<div class="ov-title">${esc(o.title)}</div><div class="ov-body">${esc(o.body)}</div></div>`;
+    el.innerHTML = `${tab}<div class="ov-main"><div class="ov-title">${esc(o.title)}</div></div><div class="ov-body">${esc(o.body)}</div>`;
   } else if (o.kind === "stat_card") {
-    el.innerHTML = `${kicker}<div class="ov-title">${esc(o.title)}</div><dl>${o.stats.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`;
+    el.innerHTML = `${tab}<div class="ov-main"><div class="ov-title">${esc(o.title)}</div><dl>${o.stats.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl></div>`;
   } else {
-    el.innerHTML = `${ICON.speed}<div class="ov-title">${esc(o.title)}</div>`;
+    el.innerHTML = `<div class="ov-icon">${ICON.speed}</div><div class="ov-main"><div class="ov-title">${esc(o.title)}</div></div>`;
   }
   const layer = $("overlays");
   layer.querySelectorAll(`.ov-${o.kind}`).forEach((old) => old.remove());
   layer.appendChild(el);
-  $("monitor").classList.add("live");
-  $("tally-text").textContent = "On air";
+  const monitor = $("monitor");
+  monitor.classList.remove("sting-on");
+  void monitor.offsetWidth;  // restart the sting animation
+  monitor.classList.add("live", "sting-on");
+  $("tally-text").textContent = "ON AIR";
   setTimeout(() => {
     el.classList.add("leaving");
     setTimeout(() => {
       el.remove();
-      if (!layer.children.length) { $("monitor").classList.remove("live"); $("tally-text").textContent = "Program"; }
+      if (!layer.children.length) { $("monitor").classList.remove("live"); $("tally-text").textContent = "PROGRAM"; }
     }, 400);
   }, Math.max(4, o.duration_s) * 1000);
 }
@@ -214,25 +219,29 @@ function cardHtml(p) {
   const m = p.moment;
   const team = TEAM_NAME[m.team] || "";
   return `
-    <div class="card-head" style="--team:${TEAM_COLOR[m.team] || TEAM_COLOR.NOR}">
+    <div class="card-head">
       <span class="kind-icon">${ICON[m.kind] || ""}</span>
       <span class="kind">${KIND_LABEL[m.kind] || m.kind}</span>
       <span class="chip-min">${minute(m.t)}</span><span>${esc(team)}</span>
-      <span class="badge ${p.source}">${p.source === "agent" ? `${ICON.check}Agent · verified` : "Template"}</span>
+      <span class="badge ${p.source}">${p.source === "agent" ? `${ICON.check}Verified` : "Template"}</span>
     </div>
     <h3>${esc(p.insight.headline)}</h3>
-    <p>${esc(p.insight.why_it_matters)}</p>
-    <div class="ovk">Airs as <b>${OVERLAY_LABEL[p.overlay.kind]}</b></div>
-    <div class="drain-wrap"><div class="drain"><i></i></div><div class="ttl-row"><span>Shelf life</span><span class="ttl" data-ttl></span></div></div>
-    <div class="row">
-      <button class="chip" data-act="evidence">${ICON.pin}${m.evidence_event_ids.length} events on pitch</button>
-      <button class="chip" data-act="trace">${ICON.steps}Agent steps (${p.trace.length})</button>
-    </div>
-    <ol class="trace" hidden>${traceHtml(p)}</ol>
+    <p class="why">${esc(p.insight.why_it_matters)}</p>
+    <div class="drain"><i></i></div>
     <div class="row actions">
       <button class="btn btn-air" data-act="approve">Put on air</button>
-      <button class="btn" data-act="edit">Edit</button>
-      <button class="btn btn-quiet" data-act="reject">Reject</button>
+      <button class="btn btn-ghost" data-act="edit">Edit</button>
+      <button class="btn btn-ghost" data-act="reject">Reject</button>
+      <button class="btn btn-ghost" data-act="details" aria-expanded="false">Details</button>
+      <span class="ttl" data-ttl></span>
+    </div>
+    <div class="details" hidden>
+      <div class="meta">Airs as <b>${OVERLAY_LABEL[p.overlay.kind]}</b> · “${esc(p.overlay.title)}”</div>
+      <div class="row">
+        <button class="chip" data-act="evidence">${ICON.pin}${m.evidence_event_ids.length} events on pitch</button>
+        <button class="chip" data-act="trace">${ICON.steps}Agent steps (${p.trace.length})</button>
+      </div>
+      <ol class="trace" hidden>${traceHtml(p)}</ol>
     </div>
     <div class="editor" hidden>
       <textarea aria-label="On-air text">${esc(p.overlay.kind === "lower_third" ? p.overlay.body : p.overlay.title)}</textarea>
@@ -255,6 +264,7 @@ function upsertProposal(p) {
     card = document.createElement("article");
     card.className = "card";
     card.dataset.id = p.id;
+    card.style.setProperty("--team", TEAM_COLOR[p.moment.team] || TEAM_COLOR.NOR);
     card.innerHTML = cardHtml(p);
   }
   // Pending cards are appended oldest-first so nothing moves under the producer's cursor;
@@ -270,7 +280,6 @@ function upsertProposal(p) {
   $("history-head").hidden = !$("history").children.length;
   card.dataset.status = p.status;
   card.querySelector(".actions").hidden = p.status !== "pending";
-  card.querySelector(".drain-wrap").hidden = p.status !== "pending";
   if (p.status !== "pending") {
     card.querySelector(".editor").hidden = true;
     card.querySelector(".rejecter").hidden = true;
@@ -329,6 +338,11 @@ document.querySelector(".queue-scroll").addEventListener("click", async (ev) => 
       Pitch.highlight(evs);
     } else if (act === "trace") {
       const t = card.querySelector(".trace"); t.hidden = !t.hidden;
+    } else if (act === "details") {
+      const d = card.querySelector(".details");
+      d.hidden = !d.hidden;
+      card.classList.toggle("open", !d.hidden);
+      ev.target.closest("[data-act]").setAttribute("aria-expanded", String(!d.hidden));
     } else if (act === "approve") {
       await api(`/api/proposals/${encodeURIComponent(id)}/approve`, {});
     } else if (act === "edit") {
@@ -349,6 +363,17 @@ document.querySelector(".queue-scroll").addEventListener("click", async (ev) => 
   } catch (e) {
     toast(e.message.includes("is ") ? `Too late: ${e.message.replace("proposal ", "this ")}.` : e.message);
   }
+});
+
+// ---- side panel: fan feeds | audit trail ----------------------------------------------------
+document.querySelector(".view-tabs").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button[data-view]");
+  if (!b) return;
+  const view = b.dataset.view;
+  for (const t of document.querySelectorAll(".view-tabs button")) t.setAttribute("aria-selected", String(t === b));
+  for (const body of document.querySelectorAll("[data-view-body]")) body.hidden = body.dataset.viewBody !== view;
+  for (const el of document.querySelectorAll(".side-panel [data-for]")) el.hidden = el.dataset.for !== view;
+  $("focus").hidden = view !== "feeds" || state.feed !== "player";
 });
 
 // ---- fan feeds ------------------------------------------------------------------------------

@@ -6,23 +6,22 @@
   <title>Gallery producer desk</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,400..900;1,62..125,700..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
   <header class="bar">
     <div class="brand">
-      <span class="live-dot" aria-hidden="true"></span>
-      <span class="wordmark">Gallery</span>
+      <span class="wordmark">GALLERY</span>
       <span class="tagline">Producer desk</span>
     </div>
     <div class="controls">
       <label class="select-wrap">
         <span class="sr-only">Match</span>
         <select id="seed">
-          <option value="7">Northgate FC v Harbour Athletic · seed 7</option>
-          <option value="11">Northgate FC v Harbour Athletic · seed 11</option>
-          <option value="12">Northgate FC v Harbour Athletic · seed 12</option>
+          <option value="7">NOR v HAR · seed 7</option>
+          <option value="11">NOR v HAR · seed 11</option>
+          <option value="12">NOR v HAR · seed 12</option>
         </select>
       </label>
       <div class="seg" id="speed" role="group" aria-label="Playback speed">
@@ -30,7 +29,7 @@
         <button data-speed="15">15×</button>
         <button data-speed="30">30×</button>
       </div>
-      <label class="toggle"><input type="checkbox" id="auto"><span class="track" aria-hidden="true"></span><span>Auto-air player tags</span></label>
+      <label class="toggle"><input type="checkbox" id="auto"><span class="track" aria-hidden="true"></span><span>Auto-air tags</span></label>
       <span id="provider" class="provider" title="Model provider">Replay</span>
       <button id="start" class="btn btn-go">Start match</button>
     </div>
@@ -39,33 +38,32 @@
   <main class="desk">
     <section class="pgm" aria-label="Program output">
       <div class="monitor" id="monitor">
-        <canvas id="pitch" width="1050" height="680" aria-label="Pitch view"></canvas>
-        <div class="tally" id="tally"><span class="tally-dot"></span><span id="tally-text">Program</span></div>
+        <div class="stage"><canvas id="pitch" width="1050" height="680" aria-label="Pitch view"></canvas></div>
+        <div class="sting" aria-hidden="true"></div>
+        <div class="tally" id="tally"><span class="tally-dot"></span><span id="tally-text">PROGRAM</span></div>
         <div class="scorebug" id="scorebug">
-          <span class="crest nor">N</span><span class="team-code">NOR</span>
-          <span class="score" id="score">0–0</span>
-          <span class="team-code">HAR</span><span class="crest har">H</span>
           <span class="clock" id="clock">00:00</span>
+          <span class="side nor"><b>NOR</b></span>
+          <span class="score" id="score">0–0</span>
+          <span class="side har"><b>HAR</b></span>
         </div>
         <div class="overlay-layer" id="overlays"></div>
       </div>
 
       <div class="analytics">
         <div class="worm-panel">
-          <div class="panel-label">
-            <span>Momentum</span>
-            <span class="legend"><i class="sw nor"></i>Northgate FC <b id="mom-nor">50</b><i class="sw har"></i>Harbour Athletic <b id="mom-har">50</b></span>
+          <div class="strip-head">
+            <span class="strip-title">Momentum</span>
+            <span class="legend"><i class="sw nor"></i>NOR <b id="mom-nor">50</b><i class="sw har"></i>HAR <b id="mom-har">50</b></span>
           </div>
           <canvas id="worm" width="900" height="150" aria-label="Momentum over the match"></canvas>
         </div>
         <div class="stat-panel">
-          <div class="stat-row" id="row-poss"><span class="lbl">Possession</span><b class="l"></b><div class="split"><i class="n"></i><i class="h"></i></div><b class="r"></b></div>
-          <div class="stat-row" id="row-shots"><span class="lbl">Shots</span><b class="l"></b><div class="split"><i class="n"></i><i class="h"></i></div><b class="r"></b></div>
-          <div class="stat-row" id="row-pass"><span class="lbl">Pass accuracy</span><b class="l"></b><div class="split"><i class="n"></i><i class="h"></i></div><b class="r"></b></div>
-          <div class="chaos">
-            <div class="panel-label"><span>Control vs chaos</span><b id="chaos-num">–</b></div>
-            <div class="scale"><div class="scale-mark" id="chaos-mark" style="left:0%"></div></div>
-          </div>
+          <div class="strip-head"><span class="strip-title">Match stats</span><span class="chaos-read">Game state <b id="chaos-num">–</b></span></div>
+          <div class="stat-row" id="row-poss"><b class="l"></b><span class="lbl">Possession</span><b class="r"></b><div class="split"><i class="n"></i><i class="h"></i></div></div>
+          <div class="stat-row" id="row-shots"><b class="l"></b><span class="lbl">Shots</span><b class="r"></b><div class="split"><i class="n"></i><i class="h"></i></div></div>
+          <div class="stat-row" id="row-pass"><b class="l"></b><span class="lbl">Pass accuracy</span><b class="r"></b><div class="split"><i class="n"></i><i class="h"></i></div></div>
+          <div class="scale" title="Control vs chaos"><span>Control</span><div class="scale-track"><div class="scale-mark" id="chaos-mark" style="left:0%"></div></div><span>Chaos</span></div>
         </div>
       </div>
     </section>
@@ -84,32 +82,33 @@
       </div>
     </section>
 
-    <section class="feeds-panel panel" aria-label="Fan feeds">
+    <section class="side-panel panel" aria-label="Fan feeds and audit trail">
       <div class="panel-head">
-        <h2>Fan feeds</h2>
-        <div class="tabs" role="tablist">
+        <div class="view-tabs" role="tablist">
+          <button role="tab" data-view="feeds" aria-selected="true">Fan feeds</button>
+          <button role="tab" data-view="audit">Audit trail</button>
+        </div>
+        <div class="tabs" role="tablist" data-for="feeds">
           <button role="tab" data-feed="casual" aria-selected="true">Casual</button>
           <button role="tab" data-feed="analyst">Analyst</button>
           <button role="tab" data-feed="player">Following</button>
           <button role="tab" data-feed="es">Español</button>
         </div>
         <select id="focus" aria-label="Player to follow" hidden></select>
+        <a class="link" href="/api/audit" target="_blank" rel="noopener" data-for="audit" hidden>Export JSON</a>
       </div>
-      <div id="recaps"></div>
-      <ol class="feed" id="feed"><li class="empty">Approved insights appear here, rewritten for each audience.</li></ol>
-    </section>
-
-    <section class="audit-panel panel" aria-label="Audit trail">
-      <div class="panel-head">
-        <h2>Audit trail</h2>
-        <a class="link" href="/api/audit" target="_blank" rel="noopener">Export JSON</a>
+      <div class="view" data-view-body="feeds">
+        <div id="recaps"></div>
+        <ol class="feed" id="feed"><li class="empty">Approved insights appear here, rewritten for each audience.</li></ol>
       </div>
-      <ol class="audit" id="audit"></ol>
+      <div class="view" data-view-body="audit" hidden>
+        <ol class="audit" id="audit"></ol>
+      </div>
     </section>
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="pitch.js?v=5"></script>
-  <script src="app.js?v=5"></script>
+  <script src="pitch.js?v=7"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>
