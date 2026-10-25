@@ -57,6 +57,7 @@ class MatchRuntime:
         self.recaps: dict[str, str] = {}
         self.in_flight = 0
         self.finished = False
+        self.momentum_history: list[tuple[float, int]] = []  # (match t, Northgate momentum - 50)
 
     # --- lifecycle ------------------------------------------------------------------------
     async def start(self, seed: int, speed: int, autorun: bool = True) -> None:
@@ -132,6 +133,8 @@ class MatchRuntime:
             self.finished = True
             self.recaps["FT"] = ""
             self._spawn(self._recap("FT"))
+        if not self.momentum_history or self.t - self.momentum_history[-1][0] >= 20:
+            self.momentum_history.append((self.t, self.stats.team("NOR")["momentum"] - 50))
         await self.broadcast({"type": "tick", **self._tick()})
 
     def _schedule(self, m: Moment) -> None:
@@ -244,4 +247,6 @@ class MatchRuntime:
                 "focus_player": self.focus_player,
                 "proposals": [p.model_dump(mode="json") for p in props],
                 "on_air": self.on_air[-12:], "recaps": self.recaps,
-                "audit": self.audit.all(self.match_id)[-80:]}
+                "audit": self.audit.all(self.match_id)[-80:],
+                "momentum_history": [list(p) for p in self.momentum_history],
+                "goals": [{"t": e.t, "team": e.team} for e in self.stats.events if e.type == "goal"]}

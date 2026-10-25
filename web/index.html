@@ -6,31 +6,33 @@
   <title>Gallery producer desk</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
   <header class="bar">
     <div class="brand">
+      <span class="live-dot" aria-hidden="true"></span>
       <span class="wordmark">Gallery</span>
-      <span class="tagline">Match-day producer desk · synthetic data</span>
+      <span class="tagline">Producer desk</span>
     </div>
     <div class="controls">
-      <label class="field">Match
+      <label class="select-wrap">
+        <span class="sr-only">Match</span>
         <select id="seed">
-          <option value="7">Northgate FC v Harbour Athletic (seed 7)</option>
-          <option value="11">Northgate FC v Harbour Athletic (seed 11)</option>
-          <option value="12">Northgate FC v Harbour Athletic (seed 12)</option>
+          <option value="7">Northgate FC v Harbour Athletic · seed 7</option>
+          <option value="11">Northgate FC v Harbour Athletic · seed 11</option>
+          <option value="12">Northgate FC v Harbour Athletic · seed 12</option>
         </select>
       </label>
-      <button id="start" class="btn btn-go">Start match</button>
       <div class="seg" id="speed" role="group" aria-label="Playback speed">
         <button data-speed="1">1×</button>
         <button data-speed="15">15×</button>
         <button data-speed="30">30×</button>
       </div>
-      <label class="switch"><input type="checkbox" id="auto"><span>Auto-air player tags</span></label>
+      <label class="toggle"><input type="checkbox" id="auto"><span class="track" aria-hidden="true"></span><span>Auto-air player tags</span></label>
       <span id="provider" class="provider" title="Model provider">Replay</span>
+      <button id="start" class="btn btn-go">Start match</button>
     </div>
   </header>
 
@@ -38,27 +40,37 @@
     <section class="pgm" aria-label="Program output">
       <div class="monitor" id="monitor">
         <canvas id="pitch" width="1050" height="680" aria-label="Pitch view"></canvas>
-        <div class="tally" id="tally">Program</div>
+        <div class="tally" id="tally"><span class="tally-dot"></span><span id="tally-text">Program</span></div>
         <div class="scorebug" id="scorebug">
-          <span class="team nor">NOR</span><span class="score" id="score">0–0</span><span class="team har">HAR</span>
+          <span class="crest nor">N</span><span class="team-code">NOR</span>
+          <span class="score" id="score">0–0</span>
+          <span class="team-code">HAR</span><span class="crest har">H</span>
           <span class="clock" id="clock">00:00</span>
         </div>
         <div class="overlay-layer" id="overlays"></div>
       </div>
-      <div class="meters">
-        <div class="meter">
-          <div class="meter-label"><span>Momentum</span><span id="mom-num">50 / 50</span></div>
-          <div class="split"><div class="split-nor" id="mom-bar" style="width:50%"></div></div>
+
+      <div class="analytics">
+        <div class="worm-panel">
+          <div class="panel-label">
+            <span>Momentum</span>
+            <span class="legend"><i class="sw nor"></i>Northgate FC <b id="mom-nor">50</b><i class="sw har"></i>Harbour Athletic <b id="mom-har">50</b></span>
+          </div>
+          <canvas id="worm" width="900" height="150" aria-label="Momentum over the match"></canvas>
         </div>
-        <div class="meter">
-          <div class="meter-label"><span>Control</span><span id="chaos-num">–</span><span>Chaos</span></div>
-          <div class="scale"><div class="scale-mark" id="chaos-mark" style="left:0%"></div></div>
+        <div class="stat-panel">
+          <div class="stat-row" id="row-poss"><span class="lbl">Possession</span><b class="l"></b><div class="split"><i class="n"></i><i class="h"></i></div><b class="r"></b></div>
+          <div class="stat-row" id="row-shots"><span class="lbl">Shots</span><b class="l"></b><div class="split"><i class="n"></i><i class="h"></i></div><b class="r"></b></div>
+          <div class="stat-row" id="row-pass"><span class="lbl">Pass accuracy</span><b class="l"></b><div class="split"><i class="n"></i><i class="h"></i></div><b class="r"></b></div>
+          <div class="chaos">
+            <div class="panel-label"><span>Control vs chaos</span><b id="chaos-num">–</b></div>
+            <div class="scale"><div class="scale-mark" id="chaos-mark" style="left:0%"></div></div>
+          </div>
         </div>
-        <div class="meter facts" id="facts"></div>
       </div>
     </section>
 
-    <section class="queue-panel" aria-label="Proposals">
+    <section class="queue-panel panel" aria-label="Proposals">
       <div class="panel-head">
         <h2>Proposals</h2>
         <span class="count" id="qcount">0 waiting</span>
@@ -72,7 +84,7 @@
       </div>
     </section>
 
-    <section class="feeds-panel" aria-label="Fan feeds">
+    <section class="feeds-panel panel" aria-label="Fan feeds">
       <div class="panel-head">
         <h2>Fan feeds</h2>
         <div class="tabs" role="tablist">
@@ -87,7 +99,7 @@
       <ol class="feed" id="feed"><li class="empty">Approved insights appear here, rewritten for each audience.</li></ol>
     </section>
 
-    <section class="audit-panel" aria-label="Audit trail">
+    <section class="audit-panel panel" aria-label="Audit trail">
       <div class="panel-head">
         <h2>Audit trail</h2>
         <a class="link" href="/api/audit" target="_blank" rel="noopener">Export JSON</a>
@@ -97,7 +109,7 @@
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="pitch.js"></script>
-  <script src="app.js"></script>
+  <script src="pitch.js?v=5"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

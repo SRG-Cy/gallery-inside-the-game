@@ -1,7 +1,20 @@
 // Producer console: one WebSocket for state, REST for producer actions.
 const $ = (id) => document.getElementById(id);
 const TEAM_NAME = { NOR: "Northgate FC", HAR: "Harbour Athletic" };
-const TEAM_COLOR = { NOR: "#5aa9e6", HAR: "#f4d35e" };
+const TEAM_COLOR = { NOR: "#4ea6ff", HAR: "#ffcb47" };
+const svg = (path) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+const ICON = {
+  goal: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/>'),
+  pressing_surge: svg('<path d="M4 12h12M12 6l6 6-6 6"/><path d="M4 6v12"/>'),
+  momentum_swing: svg('<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>'),
+  milestone: svg('<path d="M5 21V4"/><path d="M5 4h12l-2 4 2 4H5"/>'),
+  speed: svg('<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>'),
+  big_chance: svg('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'),
+  tactical_shift: svg('<path d="M7 4v16M3 16l4 4 4-4"/><path d="M17 20V4M13 8l4-4 4 4"/>'),
+  check: svg('<path d="M5 12l5 5 9-10"/>'),
+  pin: svg('<path d="M12 21s7-6.2 7-12a7 7 0 10-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>'),
+  steps: svg('<path d="M4 6h16M4 12h10M4 18h6"/>'),
+};
 const KIND_LABEL = {
   pressing_surge: "Pressing surge", momentum_swing: "Momentum swing", milestone: "Milestone",
   speed: "Speed", big_chance: "Big chance", goal: "Goal", tactical_shift: "Substitution",
@@ -14,7 +27,10 @@ const AUDIT_LABEL = {
   expired: "Expired", dropped: "Dropped", personalized: "Personalized", recap: "Recap",
 };
 
-const state = { t: 0, speed: 15, proposals: new Map(), feed: "casual", matchId: null, focus: "NOR-6", deferred: new Set() };
+const state = {
+  t: 0, speed: 15, proposals: new Map(), feed: "casual", matchId: null, focus: "NOR-6", deferred: new Set(),
+  worm: [], goals: [], score: { NOR: 0, HAR: 0 }, auditIds: new Set(),
+};
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const clock = (t) => `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
@@ -72,18 +88,83 @@ function renderTick(m) {
   $("score").textContent = `${m.score.NOR}–${m.score.HAR}`;
   $("clock").textContent = m.finished ? "FT" : clock(m.t);
   const nor = m.teams.NOR, har = m.teams.HAR;
-  $("mom-bar").style.width = `${nor.momentum}%`;
-  $("mom-num").textContent = `${nor.momentum} / ${har.momentum}`;
+  $("mom-nor").textContent = nor.momentum;
+  $("mom-har").textContent = har.momentum;
   const chaos = Math.round((nor.control_chaos + har.control_chaos) / 2);
   $("chaos-mark").style.left = `${chaos}%`;
   $("chaos-num").textContent = chaos < 34 ? "Controlled" : chaos < 67 ? "Open" : "Chaotic";
-  $("facts").innerHTML = `
-    <span>Possession</span><b>${nor.possession_pct}%</b><b>${har.possession_pct}%</b>
-    <span>Shots</span><b>${nor.shots}</b><b>${har.shots}</b>
-    <span>Passing</span><b>${nor.pass_accuracy_pct}%</b><b>${har.pass_accuracy_pct}%</b>`;
+  statRow("row-poss", nor.possession_pct, har.possession_pct, "%");
+  statRow("row-shots", nor.shots, har.shots, "");
+  statRow("row-pass", nor.pass_accuracy_pct, har.pass_accuracy_pct, "%");
+  for (const team of ["NOR", "HAR"]) {
+    if (m.score[team] > state.score[team]) state.goals.push({ t: m.t, team });
+  }
+  state.score = { ...m.score };
+  const last = state.worm[state.worm.length - 1];
+  if (!last || m.t - last.t >= 20) state.worm.push({ t: m.t, v: nor.momentum - 50 });
+  drawWorm();
   renderProvider(m.provider, m.provider_status);
   Pitch.update(m.recent_events);
   updateCountdowns();
+}
+
+function statRow(id, l, r, unit) {
+  const row = $(id);
+  row.querySelector(".l").textContent = `${l}${unit}`;
+  row.querySelector(".r").textContent = `${r}${unit}`;
+  const total = l + r || 1;
+  row.querySelector(".n").style.flexGrow = l / total || 0.5;
+  row.querySelector(".h").style.flexGrow = r / total || 0.5;
+}
+
+// The momentum worm: Northgate above the line, Harbour below, goals marked.
+function drawWorm() {
+  const c = $("worm"), ctx = c.getContext("2d");
+  const W = c.width, H = c.height, mid = H / 2, FULL = 5400;
+  const x = (t) => (t / FULL) * W;
+  const y = (v) => mid - (v / 50) * (mid - 10);
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = "rgba(148,166,199,.18)";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 5]);
+  for (const t of [900, 1800, 2700, 3600, 4500]) { ctx.beginPath(); ctx.moveTo(x(t), 4); ctx.lineTo(x(t), H - 4); ctx.stroke(); }
+  ctx.setLineDash([]);
+  ctx.strokeStyle = "rgba(148,166,199,.35)";
+  ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(W, mid); ctx.stroke();
+  ctx.fillStyle = "rgba(148,166,199,.6)";
+  ctx.font = "600 18px Archivo, sans-serif";
+  ctx.fillText("HT", x(2700) + 6, 20);
+  const pts = state.worm;
+  if (pts.length > 1) {
+    for (const [sign, color] of [[1, "78,166,255"], [-1, "255,203,71"]]) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, sign > 0 ? 0 : mid, W, mid);
+      ctx.clip();
+      const grad = ctx.createLinearGradient(0, sign > 0 ? 0 : H, 0, mid);
+      grad.addColorStop(0, `rgba(${color},.55)`);
+      grad.addColorStop(1, `rgba(${color},.05)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(x(pts[0].t), mid);
+      for (const p of pts) ctx.lineTo(x(p.t), y(p.v));
+      ctx.lineTo(x(pts[pts.length - 1].t), mid);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = `rgb(${color})`;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      pts.forEach((p, i) => (i ? ctx.lineTo(x(p.t), y(p.v)) : ctx.moveTo(x(p.t), y(p.v))));
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+  for (const g of state.goals) {
+    const gx = x(g.t), gy = g.team === "NOR" ? 14 : H - 14;
+    ctx.fillStyle = TEAM_COLOR[g.team];
+    ctx.beginPath(); ctx.arc(gx, gy, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#0d1424"; ctx.lineWidth = 2; ctx.stroke();
+  }
 }
 
 function showOverlay(item, teamCode) {
@@ -91,23 +172,24 @@ function showOverlay(item, teamCode) {
   const el = document.createElement("div");
   el.className = `ov ov-${o.kind}`;
   el.style.setProperty("--team", TEAM_COLOR[teamCode] || TEAM_COLOR.NOR);
+  const kicker = `<div class="ov-kicker">${esc(TEAM_NAME[teamCode] || "Gallery insight")}</div>`;
   if (o.kind === "lower_third") {
-    el.innerHTML = `<div class="stripe"></div><div class="txt"><div class="ov-title">${esc(o.title)}</div><div class="ov-body">${esc(o.body)}</div></div>`;
+    el.innerHTML = `<div class="stripe"></div><div class="txt">${kicker}<div class="ov-title">${esc(o.title)}</div><div class="ov-body">${esc(o.body)}</div></div>`;
   } else if (o.kind === "stat_card") {
-    el.innerHTML = `<div class="ov-title">${esc(o.title)}</div><dl>${o.stats.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`;
+    el.innerHTML = `${kicker}<div class="ov-title">${esc(o.title)}</div><dl>${o.stats.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`;
   } else {
-    el.innerHTML = `<div class="ov-title">${esc(o.title)}</div>`;
+    el.innerHTML = `${ICON.speed}<div class="ov-title">${esc(o.title)}</div>`;
   }
   const layer = $("overlays");
   layer.querySelectorAll(`.ov-${o.kind}`).forEach((old) => old.remove());
   layer.appendChild(el);
   $("monitor").classList.add("live");
-  $("tally").textContent = "On air";
+  $("tally-text").textContent = "On air";
   setTimeout(() => {
     el.classList.add("leaving");
     setTimeout(() => {
       el.remove();
-      if (!layer.children.length) { $("monitor").classList.remove("live"); $("tally").textContent = "Program"; }
+      if (!layer.children.length) { $("monitor").classList.remove("live"); $("tally-text").textContent = "Program"; }
     }, 400);
   }, Math.max(4, o.duration_s) * 1000);
 }
@@ -125,25 +207,26 @@ function traceHtml(p) {
   return p.trace.map((s) => `<li><span class="${s.ok ? "ok" : "bad"}">${s.ok ? "✓" : "✗"}</span>
     <span>${name[s.agent] || s.agent}${s.attempt ? ` (try ${s.attempt})` : ""}</span>
     <span>${s.ms ? `${s.ms} ms` : ""}</span>
-    <span>${esc((s.errors || []).slice(0, 2).join("; "))}</span></li>`).join("");
+    <span class="err">${esc((s.errors || []).slice(0, 2).join("; "))}</span></li>`).join("");
 }
 
 function cardHtml(p) {
   const m = p.moment;
   const team = TEAM_NAME[m.team] || "";
   return `
-    <div class="card-head">
+    <div class="card-head" style="--team:${TEAM_COLOR[m.team] || TEAM_COLOR.NOR}">
+      <span class="kind-icon">${ICON[m.kind] || ""}</span>
       <span class="kind">${KIND_LABEL[m.kind] || m.kind}</span>
-      <span>${minute(m.t)}</span><span>${esc(team)}</span>
-      <span class="badge ${p.source}">${p.source === "agent" ? "Agent, verified" : "Template"}</span>
-      <span class="ttl" data-ttl></span>
+      <span class="chip-min">${minute(m.t)}</span><span>${esc(team)}</span>
+      <span class="badge ${p.source}">${p.source === "agent" ? `${ICON.check}Agent · verified` : "Template"}</span>
     </div>
     <h3>${esc(p.insight.headline)}</h3>
     <p>${esc(p.insight.why_it_matters)}</p>
-    <div class="ovk">Airs as: ${OVERLAY_LABEL[p.overlay.kind]} · “${esc(p.overlay.title)}”</div>
+    <div class="ovk">Airs as <b>${OVERLAY_LABEL[p.overlay.kind]}</b></div>
+    <div class="drain-wrap"><div class="drain"><i></i></div><div class="ttl-row"><span>Shelf life</span><span class="ttl" data-ttl></span></div></div>
     <div class="row">
-      <button class="chip" data-act="evidence">Show ${m.evidence_event_ids.length} events on pitch</button>
-      <button class="chip" data-act="trace">Agent steps (${p.trace.length})</button>
+      <button class="chip" data-act="evidence">${ICON.pin}${m.evidence_event_ids.length} events on pitch</button>
+      <button class="chip" data-act="trace">${ICON.steps}Agent steps (${p.trace.length})</button>
     </div>
     <ol class="trace" hidden>${traceHtml(p)}</ol>
     <div class="row actions">
@@ -187,6 +270,7 @@ function upsertProposal(p) {
   $("history-head").hidden = !$("history").children.length;
   card.dataset.status = p.status;
   card.querySelector(".actions").hidden = p.status !== "pending";
+  card.querySelector(".drain-wrap").hidden = p.status !== "pending";
   if (p.status !== "pending") {
     card.querySelector(".editor").hidden = true;
     card.querySelector(".rejecter").hidden = true;
@@ -221,9 +305,13 @@ function updateCountdowns() {
   for (const card of document.querySelectorAll('.card[data-status="pending"]')) {
     const p = state.proposals.get(card.dataset.id);
     const left = Math.max(0, p.expires_at - state.t);
+    const span = Math.max(1, p.expires_at - p.moment.t);
+    const urgent = left / span < 0.25;
     const el = card.querySelector("[data-ttl]");
     el.textContent = `${clock(left)} left`;
-    el.classList.toggle("urgent", left < 30);
+    el.classList.toggle("urgent", urgent);
+    card.querySelector(".drain").classList.toggle("urgent", urgent);
+    card.querySelector(".drain i").style.width = `${(100 * left) / span}%`;
   }
 }
 
@@ -322,8 +410,11 @@ function auditText(r) {
 }
 
 function addAudit(r, prepend = true) {
+  if (state.auditIds.has(r.id)) return;  // a row can arrive both in the snapshot and live
+  state.auditIds.add(r.id);
   const li = document.createElement("li");
-  li.innerHTML = `<span class="min">${minute(r.t)}</span><span class="k k-${r.kind}">${AUDIT_LABEL[r.kind] || r.kind}</span><span>${esc(auditText(r))}</span>`;
+  li.className = `kd-${r.kind}`;
+  li.innerHTML = `<span class="min">${minute(r.t)}</span><span class="dot"></span><span class="k k-${r.kind}">${AUDIT_LABEL[r.kind] || r.kind}</span><span class="txt">${esc(auditText(r))}</span>`;
   const list = $("audit");
   if (prepend) list.prepend(li); else list.appendChild(li);
   while (list.children.length > 150) list.lastChild.remove();
@@ -337,6 +428,10 @@ function applySnapshot(s) {
     $("overlays").innerHTML = "";
     $("monitor").classList.remove("live");
   }
+  // The server keeps the whole match's momentum, so a page opened mid-match still shows it.
+  state.worm = (s.momentum_history || []).map(([t, v]) => ({ t, v }));
+  state.goals = s.goals || [];
+  state.score = { ...s.score };
   state.matchId = s.match_id;
   state.speed = s.speed;
   state.focus = s.focus_player;
@@ -345,6 +440,7 @@ function applySnapshot(s) {
   renderSpeed();
   for (const p of [...s.proposals].reverse()) upsertProposal(p);
   $("audit").innerHTML = "";
+  state.auditIds.clear();
   for (const r of [...s.audit].reverse()) addAudit(r, false);
   state.recaps = s.recaps;
   renderRecaps(s.recaps);
@@ -375,5 +471,6 @@ function connect() {
 }
 
 renderSpeed();
+drawWorm();
 loadSquads().catch(() => {});
 connect();

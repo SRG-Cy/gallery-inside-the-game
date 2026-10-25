@@ -230,3 +230,14 @@ async def test_edit_changes_title_for_player_tag():
     p = next(p for p in pending(rt) if p.overlay.kind == "player_tag")
     await rt.approve(p.id, edited_text="Fastest shot of the half")
     assert rt.on_air[-1]["overlay"]["title"] == "Fastest shot of the half"
+
+
+async def test_snapshot_carries_momentum_history_and_goals():
+    rt, _ = make_runtime()
+    await rt.start(seed=7, speed=30, autorun=False)
+    await step_until(rt, lambda: rt.t >= 20 * 60)
+    snap = rt.snapshot()
+    hist = snap["momentum_history"]
+    assert len(hist) >= 20 and all(a[0] < b[0] for a, b in zip(hist, hist[1:]))
+    assert all(-50 <= v <= 50 for _, v in hist)
+    assert [g["team"] for g in snap["goals"]] == [e.team for e in rt.stats.events if e.type == "goal"]
