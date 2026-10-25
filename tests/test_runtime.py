@@ -151,3 +151,19 @@ async def test_audit_rows_are_broadcast():
     rows = [m["row"] for m in sent if m["type"] == "audit"]
     assert any(r["kind"] == "rejected" for r in rows)
     assert any(r["kind"] == "proposed" for r in rows)
+
+
+async def test_shelf_life_gives_producer_twenty_real_seconds_at_any_speed():
+    rt, _ = make_runtime()
+    await rt.start(seed=7, speed=30, autorun=False)
+    await step_until(rt, lambda: pending(rt))
+    p = pending(rt)[0]
+    assert p.expires_at - p.moment.t >= 20 * 30
+
+
+async def test_no_momentum_swing_in_first_ten_minutes():
+    rt, _ = make_runtime()
+    await rt.start(seed=7, speed=30, autorun=False)
+    await step_until(rt, lambda: rt.t >= 15 * 60)
+    await rt.drain()
+    assert all(p.moment.t >= 600 for p in rt.proposals.values() if p.moment.kind == "momentum_swing")

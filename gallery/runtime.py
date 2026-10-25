@@ -19,6 +19,7 @@ SPEEDS = (1, 15, 30)
 TICK_WALL = 0.25
 MAX_IN_FLIGHT = 3
 AUTO_KINDS = {"speed"}
+MIN_SHELF_WALL_S = 20  # a human needs time to read and decide, whatever the playback speed
 
 
 class Conflict(Exception):
@@ -149,6 +150,7 @@ class MatchRuntime:
             self.in_flight -= uses_llm
         if match_id != self.match_id:
             return
+        p.expires_at = max(p.expires_at, m.t + MIN_SHELF_WALL_S * self.speed)
         for step in p.trace:
             self._log("agent_step", m.t, p.id, step)
         self.proposals[p.id] = p

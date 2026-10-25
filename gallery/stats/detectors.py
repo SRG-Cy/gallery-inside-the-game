@@ -8,6 +8,7 @@ WINDOW = 300.0
 COOLDOWN = 600.0
 MOMENTUM_CHECK_EVERY = 30.0
 MILESTONES = (50, 75, 100)
+MIN_MOMENTUM_T = 600.0  # momentum needs ten minutes of play before it means anything
 
 
 class Detectors:
@@ -93,7 +94,7 @@ class Detectors:
         if leader is None or leader == self.momentum_leader:
             return None
         previous, self.momentum_leader = self.momentum_leader, leader
-        if previous is None or not self._cooled("momentum_swing", "any", e.t):
+        if previous is None or e.t < MIN_MOMENTUM_T or not self._cooled("momentum_swing", "any", e.t):
             return None
         self.last_fired[("momentum_swing", "any")] = e.t
         evidence = [x.id for x in self.stats.events

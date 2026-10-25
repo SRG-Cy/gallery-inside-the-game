@@ -73,7 +73,7 @@ def test_pressing_surge_and_cooldown():
 
 def test_momentum_swing():
     f = Feed()
-    t = 0
+    t = 600  # swings are only reported after ten minutes
     for _ in range(10):
         t += 30
         f.add(t, "shot", "NOR", "NOR-11", x=95, y=34, outcome="saved", speed_kmh=70)

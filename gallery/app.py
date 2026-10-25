@@ -129,6 +129,16 @@ def create_app(settings: Settings | None = None, llm: LLM | None = None) -> Fast
         """Aired overlays with timing, for a downstream graphics renderer."""
         return runtime.on_air
 
+    @app.get("/api/events")
+    async def events(ids: str):
+        """Played events by id, so the console can draw a proposal's evidence on the pitch."""
+        try:
+            wanted = [int(i) for i in ids.split(",") if i.strip()]
+        except ValueError:
+            raise HTTPException(422, "ids must be comma-separated integers")
+        by_id = runtime.stats.by_id
+        return [by_id[i].model_dump(mode="json") for i in wanted if i in by_id]
+
     @app.get("/api/audit")
     async def audit():
         return runtime.audit.all(runtime.match_id)

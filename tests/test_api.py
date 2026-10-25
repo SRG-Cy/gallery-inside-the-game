@@ -95,3 +95,12 @@ def test_focus_player_and_squads(client):
     assert len(squads["NOR"]) == 14
     assert client.post("/api/focus", json={"player_id": "HAR-9"}).status_code == 200
     assert client.post("/api/focus", json={"player_id": "X"}).status_code == 422
+
+
+def test_events_by_id_only_returns_played_events(client):
+    inject_proposal(client)
+    rt = client.app.state.runtime
+    played = rt.stats.events[-1].id
+    got = client.get(f"/api/events?ids=1,2,{played},{played + 500}").json()
+    assert [e["id"] for e in got] == [1, 2, played]
+    assert client.get("/api/events?ids=abc").status_code == 422
