@@ -43,6 +43,7 @@ class Moment(BaseModel):
     evidence_event_ids: list[int]
     stats: dict
     priority: int
+    event_id: int = 0  # the event that triggered the moment
 
 
 class Claim(BaseModel):

@@ -27,7 +27,7 @@ class Detectors:
                 team: str | None = None, player_id: str | None = None) -> Moment:
         return Moment(kind=kind, t=e.t, team=team if team is not None else e.team,
                       player_id=player_id if player_id is not None else e.player_id,
-                      evidence_event_ids=evidence[-10:], stats=stats, priority=priority)
+                      evidence_event_ids=evidence[-10:], stats=stats, priority=priority, event_id=e.id)
 
     def check(self, e: Event) -> list[Moment]:
         out: list[Moment] = []

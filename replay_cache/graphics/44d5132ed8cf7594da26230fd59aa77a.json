@@ -1,0 +1,5 @@
+{
+ "agent": "graphics",
+ "prompt": "MOMENT: tactical_shift\nINSIGHT: {\"headline\":\"Theo Marsh replaces Ruben Calloway in key tactical shift at 62'\",\"why_it_matters\":\"Northgate FC maintains control and high momentum with 51% possession and 96 momentum, signaling intent to sustain pressure and rhythm after the substitution of Ruben Calloway by Theo Marsh at 62'.\",\"claims\":[{\"text\":\"51% possession maintained\",\"metric\":\"possession_pct\",\"value\":51.0,\"subject\":\"NOR\"},{\"text\":\"High momentum level\",\"metric\":\"momentum\",\"value\":96.0,\"subject\":\"NOR\"},{\"text\":\"Ruben Calloway off with 84% pass accuracy\",\"metric\":\"pass_accuracy_pct\",\"value\":84.0,\"subject\":\"NOR\"},{\"text\":\"Theo Marsh on with no passes yet\",\"metric\":\"passes\",\"value\":0.0,\"subject\":\"NOR-12\"}],\"evidence_event_ids\":[1548]}",
+ "text": "{\"kind\":\"lower_third\",\"title\":\"Northgate FC tactical shift at 62'\",\"body\":\"Theo Marsh replaces Ruben Calloway, maintaining 51% possession and 96 momentum to sustain pressure.\",\"stats\":[[\"Possession\",\"51%\"],[\"Momentum\",\"96\"],[\"Calloway pass accuracy\",\"84%\"]]}"
+}

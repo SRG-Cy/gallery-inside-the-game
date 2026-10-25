@@ -17,8 +17,13 @@ FREE_NUMBERS = {5.0, 10.0, 45.0, 90.0}
 
 _CAP = r"[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+"
 _NAME_RUN = re.compile(rf"{_CAP}(?:'s|’s)?(?: {_CAP}(?:'s|’s)?)+")
-_MINUTE = re.compile(r"\b(\d{1,3})(?:'|’| ?min\b|(?:st|nd|rd|th) minute)")
+_MINUTE = re.compile(r"\b(\d{1,3})(?:'|’| ?(?:min|mins|minute|minutes)\b|(?:st|nd|rd|th) minute)")
 _NUMBER = re.compile(r"(?<![\w.])(\d+(?:\.\d+)?)")
+# Spelled-out counts get the same check as digits. "one" is left out: "one of the fastest" is not a stat.
+_NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+                 "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
+                 "eighteen", "nineteen", "twenty"]
+_NUMBER_WORD = re.compile(r"\b(" + "|".join(w for w in _NUMBER_WORDS if w != "one") + r")\b", re.I)
 
 _STOPWORDS = set("""
 The A An And But Or So If In On At Of For From To With Without By Over Under Since After Before
@@ -26,7 +31,8 @@ Into Out Up Down Off Back This That These Those Their Them They Its It His Her H
 What Why How When Where Who Now Then Just Still Even Only Also Big Huge Goal Goals Chance Press
 Pressing Momentum Swing Change Sub Substitution Speed Top Full Half Time Match Game Recap Kick
 Analyst Casual Fan Following Watch Look Here There Every Each All Both One Two Three First Second
-Last Next Gol Cambio Presión Gran Ocasión Sigue Siguiendo Ahora El La Los Las Un Una De Del En
+Last Next Pass Passes Passing Accuracy Avg Average Distance Shot Shots Target Possession
+Pressures Pressure Control Chaos Rate Rating Difficulty Total Team Player Minutes Gol Cambio Presión Gran Ocasión Sigue Siguiendo Ahora El La Los Las Un Una De Del En
 Con Para Por Al Tras Mientras Entra Sale Minuto Pases Velocidad Impulso Vamos Ojo Qué
 """.split())
 _ALLOWED = (_STOPWORDS
@@ -143,4 +149,8 @@ def verify_text(text: str, stats: StatsEngine, now: float, facts: dict | None = 
             continue
         if not any(_close(n, v) for v in visible):
             errors.append(f"number {raw} does not match any current stat")
+    for word in _NUMBER_WORD.findall(text):
+        n = float(_NUMBER_WORDS.index(word.lower()))
+        if n not in FREE_NUMBERS and not any(_close(n, v) for v in visible):
+            errors.append(f"number {word} does not match any current stat")
     return errors

@@ -7,6 +7,7 @@ import logging
 import re
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 from typing import Callable, Protocol
 
 from gallery.config import Settings
@@ -15,6 +16,12 @@ log = logging.getLogger(__name__)
 
 TIMEOUT_S = 8.0
 DEGRADED_FOR_S = 60.0
+
+
+def foundry_base(endpoint: str) -> str:
+    """The resource address, whichever Foundry URL was copied (project, responses or chat URL)."""
+    u = urlparse(endpoint.strip())
+    return f"{u.scheme}://{u.netloc}/"
 
 
 class LLM(Protocol):
@@ -39,7 +46,7 @@ class AFLLM:
         from agent_framework.openai import OpenAIChatCompletionClient
 
         self.client = OpenAIChatCompletionClient(
-            model=settings.foundry_deployment, azure_endpoint=settings.foundry_endpoint,
+            model=settings.foundry_deployment, azure_endpoint=foundry_base(settings.foundry_endpoint),
             api_key=settings.foundry_key, api_version="2024-10-21")
         self.model = f"foundry:{settings.foundry_deployment}"
         self._degraded_until = 0.0

@@ -16,12 +16,15 @@ Reply as:
              "subject": "<NOR | HAR | player id>"}}],
  "evidence_event_ids": [<ids from the moment>]}}
 Every number you write must also appear as a claim. A claim's metric must be a key returned by
-get_team_stats / get_player_stats for that subject, or a key of FACTS (dotted paths allowed, e.g. "rate_per_min")."""
+get_team_stats / get_player_stats for that subject, a key of FACTS (dotted paths allowed, e.g. "rate_per_min"),
+or a compare_windows figure written as "<metric_prefix>.last.<key>" or "<metric_prefix>.previous.<key>".
+Refer to match time as "NN'" (for example 62'). Name clubs exactly: Northgate FC, Harbour Athletic."""
 
 GRAPHICS = f"""You are the Graphics operator. Turn a verified insight into an on-screen overlay.
 Choose kind: "lower_third" for narrative insights, "stat_card" when 2-3 numbers tell the story,
 "player_tag" for a single player's figure. Reuse the insight's facts; add nothing new.
 {_RULES}
+Write stat labels in sentence case ("Pass accuracy").
 Reply as: {{"kind": "...", "title": "<= 40 chars", "body": "<= 110 chars",
  "stats": [["label", "value"], ...]}}"""
 

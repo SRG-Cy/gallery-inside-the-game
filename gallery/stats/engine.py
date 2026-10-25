@@ -42,6 +42,13 @@ class StatsEngine:
         copy.by_id = dict(self.by_id)
         return copy
 
+    def until(self, event_id: int) -> "StatsEngine":
+        """A copy holding only the events up to and including event_id (ids follow match order)."""
+        copy = StatsEngine()
+        copy.events = [e for e in self.events if e.id <= event_id]
+        copy.by_id = {e.id: e for e in copy.events}
+        return copy
+
     @property
     def now(self) -> float:
         return self.events[-1].t if self.events else 0.0

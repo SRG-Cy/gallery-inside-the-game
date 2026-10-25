@@ -44,3 +44,14 @@ def test_parse_json_invalid_raises():
         parse_json("no json here")
     with pytest.raises(ValueError):
         parse_json('{"a": }')
+
+
+def test_foundry_endpoint_accepts_any_copied_url_form():
+    from gallery.llm import foundry_base
+    for raw in ["https://r.services.ai.azure.com/openai/v1/responses",
+                "https://r.services.ai.azure.com/api/projects/p",
+                "https://r.services.ai.azure.com",
+                " https://r.services.ai.azure.com/ "]:
+        assert foundry_base(raw) == "https://r.services.ai.azure.com/"
+    assert foundry_base("https://x.openai.azure.com/openai/deployments/d/chat/completions?api-version=1") \
+        == "https://x.openai.azure.com/"

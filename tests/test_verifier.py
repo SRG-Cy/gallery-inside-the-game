@@ -106,3 +106,27 @@ def test_single_unknown_name_mid_sentence_is_flagged(first_half):
     assert any("Messi" in e for e in verify(i, first_half, first_half.now))
     ok = insight([], headline="Goal: Idris Okafor scores", why="So close! Harbour Athletic nearly level.")
     assert verify(ok, first_half, first_half.now) == []
+
+
+def test_minutes_written_as_words_are_minute_references(first_half):
+    now = first_half.now  # 45'
+    assert verify_text("Harbour Athletic change shape at 40 minutes.", first_half, now) == []
+    assert verify_text("Over the last 15 mins Northgate FC dominate.", first_half, now) == []
+    assert any("80" in e for e in verify_text("A big change at 80 minutes.", first_half, now))
+
+
+def test_stat_labels_are_not_names():
+    from gallery.agents.verifier import unknown_names
+    assert unknown_names("Shots on target: 3. Pass Accuracy: 84%. Avg Pass Distance: 18 m.") == []
+    assert unknown_names("It reflects Northern FC's rhythm.") == ["Northern"]
+
+
+def test_number_words_are_checked_like_digits(first_half):
+    shots = first_half.team("NOR")["shots"]
+    words = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+             "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen",
+             "nineteen", "twenty"]
+    assert verify_text(f"Northgate FC have taken {words[shots]} shots.", first_half, first_half.now) == []
+    assert any("nineteen" in e or "19" in e for e in
+               verify_text("Northgate FC have nineteen shots on target and nineteen corners.", first_half,
+                           first_half.now)) or first_half.team("NOR")["shots_on_target"] in (18, 19, 20)

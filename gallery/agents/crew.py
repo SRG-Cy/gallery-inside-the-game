@@ -6,7 +6,7 @@ import time
 from pydantic import ValidationError
 
 from gallery.agents import prompts, templates
-from gallery.agents.tools import make_tools
+from gallery.agents.tools import make_tools, windows_for_claims
 from gallery.agents.verifier import verify, verify_text
 from gallery.llm import LLM, parse_json
 from gallery.models import Insight, Moment, Overlay, Proposal
@@ -45,17 +45,21 @@ class Crew:
 
     async def _analyst(self, m: Moment, frozen: StatsEngine, trace: list[dict]) -> Insight | None:
         prompt = _moment_prompt(m)
+        facts = {**m.stats, "windows": {}}
         for attempt in range(2):
             text = await self._call(trace, "analyst", prompts.ANALYST, prompt, make_tools(frozen))
             if text is None:
                 return None
             try:
                 insight = Insight.model_validate(parse_json(text))
-                errors = verify(insight, frozen, m.t, facts=m.stats)
+                facts["windows"] = windows_for_claims(frozen, [c.metric for c in insight.claims])
+                errors = verify(insight, frozen, m.t, facts=facts)
             except (ValueError, ValidationError) as exc:
                 errors = [f"reply was not valid insight JSON: {str(exc)[:200]}"]
             trace.append({"agent": "verifier", "ms": 0, "ok": not errors, "errors": errors, "attempt": attempt + 1})
             if not errors:
+                if facts["windows"]:
+                    m.stats["windows"] = facts["windows"]  # graphics, edits and feeds can cite them too
                 return insight
             prompt = (f"{_moment_prompt(m)}\n\nYOUR PREVIOUS DRAFT:\n{text}\n\n"
                       f"THE VERIFIER REJECTED IT:\n- " + "\n- ".join(errors) +
@@ -81,7 +85,7 @@ class Crew:
         return overlay if not errors else None
 
     async def propose(self, m: Moment, now: float) -> Proposal:
-        frozen = self.stats.frozen()
+        frozen = self.stats.until(m.event_id)  # as of the moment, however late the task runs
         trace: list[dict] = []
         insight = None if m.kind in TEMPLATE_ONLY else await self._analyst(m, frozen, trace)
         source = "agent" if insight else "template"
@@ -101,10 +105,12 @@ class Crew:
 
     async def personalize(self, p: Proposal, player_id: str | None) -> dict[str, str]:
         fallback = templates.variants_for(p.insight, p.moment)
+        # Describe everyone as of the moment itself, so the feed is the same whenever it is approved.
+        at = self.stats.until(p.moment.event_id)
         facts = dict(p.moment.stats)
         focus = ""
         if player_id in PLAYERS:
-            facts["focus_player"] = self.stats.player(player_id)
+            facts["focus_player"] = at.player(player_id)
             focus = f"FOLLOWED PLAYER: {PLAYERS[player_id].name} ({player_id}) {json.dumps(facts['focus_player'])}\n"
         prompt = f"{focus}INSIGHT: {p.insight.model_dump_json()}\nFACTS: {json.dumps(p.moment.stats, sort_keys=True)}"
         text = await self._call(p.trace, "personalizer", prompts.PERSONALIZER, prompt)
@@ -116,7 +122,7 @@ class Crew:
         for key in VARIANTS:
             candidate = data.get(key)
             ok = isinstance(candidate, str) and candidate.strip() and not verify_text(
-                candidate, self.stats, self.stats.now, facts=facts)
+                candidate, at, at.now, facts=facts)
             out[key] = candidate if ok else fallback[key]
         return out
 
