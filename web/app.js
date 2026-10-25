@@ -86,6 +86,7 @@ function renderProvider(provider, status) {
 // ---- program monitor ------------------------------------------------------------------------
 function renderTick(m) {
   state.t = m.t;
+  if (m.speed && m.speed !== state.speed) { state.speed = m.speed; renderSpeed(); }  // speed can change from another console
   $("score").textContent = `${m.score.NOR}–${m.score.HAR}`;
   $("clock").textContent = m.finished ? "FT" : clock(m.t);
   const nor = m.teams.NOR, har = m.teams.HAR;
