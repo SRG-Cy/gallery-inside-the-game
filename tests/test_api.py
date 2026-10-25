@@ -11,7 +11,7 @@ from tests.fakes import FakeLLM
 
 
 def settings(tmp_path):
-    return Settings("replay", None, "", None, None, None, str(tmp_path / "replay"),
+    return Settings("replay", None, None, None, str(tmp_path / "replay"),
                     str(tmp_path / "audit.db"))
 
 

@@ -13,7 +13,7 @@ EXPECTED_TOOLS = {"get_match_state", "get_team_stats", "get_player_stats", "comp
 
 
 def make_client(tmp_path):
-    s = Settings("replay", None, "", None, None, None, str(tmp_path / "r"), str(tmp_path / "a.db"))
+    s = Settings("replay", None, None, None, str(tmp_path / "r"), str(tmp_path / "a.db"))
     return TestClient(create_app(s, llm=FakeLLM(default="not json")))
 
 

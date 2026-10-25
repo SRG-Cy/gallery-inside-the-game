@@ -51,7 +51,7 @@ flowchart LR
   Q & PROD & AN & V1 --> AUDIT[(Audit log, SQLite)]
 ```
 
-- **Agents:** Microsoft Agent Framework (`agent-framework-core`, `OpenAIChatCompletionClient`) on a **Microsoft Foundry** model deployment. GitHub Models works for free development.
+- **Agents:** Microsoft Agent Framework (`agent-framework-core`, `OpenAIChatCompletionClient`) on a **Microsoft Foundry** model deployment.
 - **Replay cache:** every model reply is cached by request hash. `GALLERY_PROVIDER=replay` replays a recorded match at zero cost and with deterministic output, which makes demos and judging reliable.
 - **Resilience:** 8-second timeout, back-off on rate limits (the provider badge turns amber and templates take over), crew concurrency cap, proposals expire when stale, and clients that reconnect mid-match get a full snapshot.
 - **Hosting:** one container on **Azure Container Apps** (scales to zero).
@@ -93,9 +93,6 @@ FOUNDRY_ENDPOINT=https://<your-resource>.openai.azure.com
 FOUNDRY_KEY=<key>
 FOUNDRY_DEPLOYMENT=<deployment name, e.g. gpt-4.1-mini>
 
-# or GitHub Models (free tier)
-# GALLERY_PROVIDER=github
-# GITHUB_TOKEN=<fine-grained token with Models: read>
 ```
 
 ### Tests
@@ -120,7 +117,6 @@ az containerapp up --name gallery --resource-group gallery-rg --location <region
 - **Microsoft Agent Framework:** agents, function tools, chat client
 - **Model Context Protocol:** read-only match data for external agents
 - **Azure Container Apps:** hosting, scale to zero
-- **GitHub Models:** free development endpoint
 
 ## License
 

@@ -1,5 +1,5 @@
-"""Provider-switchable LLM access: Microsoft Agent Framework agents on GitHub Models or Foundry,
-wrapped in a replay cache so demos are free and deterministic."""
+"""LLM access: Microsoft Agent Framework agents on a Microsoft Foundry deployment, wrapped in a
+replay cache so demos are free and deterministic."""
 import asyncio
 import hashlib
 import json
@@ -15,7 +15,6 @@ log = logging.getLogger(__name__)
 
 TIMEOUT_S = 8.0
 DEGRADED_FOR_S = 60.0
-GITHUB_MODELS_URL = "https://models.github.ai/inference"
 
 
 class LLM(Protocol):
@@ -39,15 +38,10 @@ class AFLLM:
     def __init__(self, settings: Settings):
         from agent_framework.openai import OpenAIChatCompletionClient
 
-        if settings.provider == "foundry":
-            self.client = OpenAIChatCompletionClient(
-                model=settings.foundry_deployment, azure_endpoint=settings.foundry_endpoint,
-                api_key=settings.foundry_key, api_version="2024-10-21")
-            self.model = f"foundry:{settings.foundry_deployment}"
-        else:
-            self.client = OpenAIChatCompletionClient(
-                model=settings.github_model, base_url=GITHUB_MODELS_URL, api_key=settings.github_token)
-            self.model = f"github:{settings.github_model}"
+        self.client = OpenAIChatCompletionClient(
+            model=settings.foundry_deployment, azure_endpoint=settings.foundry_endpoint,
+            api_key=settings.foundry_key, api_version="2024-10-21")
+        self.model = f"foundry:{settings.foundry_deployment}"
         self._degraded_until = 0.0
 
     @property

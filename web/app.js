@@ -61,7 +61,7 @@ function renderSpeed() {
 
 function renderProvider(provider, status) {
   const el = $("provider");
-  const names = { replay: "Replay (cached)", github: "GitHub Models", foundry: "Microsoft Foundry" };
+  const names = { replay: "Replay (cached)", foundry: "Microsoft Foundry" };
   el.textContent = status === "degraded" ? `${names[provider] || provider}: rate limited, using templates` : names[provider] || provider;
   el.className = `provider ${status === "degraded" ? "degraded" : provider === "replay" ? "" : "ok"}`;
 }
