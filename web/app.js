@@ -152,7 +152,7 @@ function cardHtml(p) {
       <button class="btn btn-quiet" data-act="reject">Reject</button>
     </div>
     <div class="editor" hidden>
-      <textarea aria-label="On-air text">${esc(p.overlay.body)}</textarea>
+      <textarea aria-label="On-air text">${esc(p.overlay.kind === "lower_third" ? p.overlay.body : p.overlay.title)}</textarea>
       <div class="warn">Edits are checked against the stats. Anything unverified is logged as an override.</div>
       <div class="row"><button class="btn btn-air" data-act="approve-edit">Put edited version on air</button>
       <button class="btn btn-quiet" data-act="cancel">Cancel</button></div>

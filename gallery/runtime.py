@@ -39,6 +39,7 @@ class MatchRuntime:
         self.focus_player = "NOR-6"
         self._loop_task: asyncio.Task | None = None
         self._tasks: set[asyncio.Task] = set()
+        self._start_lock = asyncio.Lock()
         self._reset(seed=7)
 
     def _reset(self, seed: int) -> None:
@@ -59,13 +60,14 @@ class MatchRuntime:
 
     # --- lifecycle ------------------------------------------------------------------------
     async def start(self, seed: int, speed: int, autorun: bool = True) -> None:
-        await self.stop()
         self.set_speed(speed)
-        self._reset(seed)
-        self._log("match_start", 0, None, {"seed": seed, "speed": speed, "provider": self.provider})
-        await self.broadcast({"type": "snapshot", **self.snapshot()})
-        if autorun:
-            self._loop_task = asyncio.create_task(self._loop())
+        async with self._start_lock:  # overlapping starts must not leave two loops running
+            await self.stop()
+            self._reset(seed)
+            self._log("match_start", 0, None, {"seed": seed, "speed": speed, "provider": self.provider})
+            if autorun:
+                self._loop_task = asyncio.create_task(self._loop())
+            await self.broadcast({"type": "snapshot", **self.snapshot()})
 
     async def stop(self) -> None:
         tasks = [t for t in [self._loop_task, *self._tasks] if t and not t.done()]
@@ -118,7 +120,7 @@ class MatchRuntime:
             self.stats.ingest(e)
             for m in self.detectors.check(e):
                 self._schedule(m)
-        for p in self.proposals.values():
+        for p in list(self.proposals.values()):  # proposals may arrive while we broadcast
             if p.status == "pending" and self.t > p.expires_at:
                 p.status = "expired"
                 self._log("expired", self.t, p.id, {})
@@ -139,11 +141,11 @@ class MatchRuntime:
         if uses_llm and self.in_flight >= MAX_IN_FLIGHT and m.priority < 3:
             self._log("dropped", m.t, None, {"kind": m.kind, "reason": "agent crew busy"})
             return
+        self.in_flight += uses_llm  # counted now, so a burst within one tick respects the cap
         self._spawn(self._propose(m, uses_llm))
 
     async def _propose(self, m: Moment, uses_llm: bool) -> None:
         match_id = self.match_id
-        self.in_flight += uses_llm
         try:
             p = await self.crew.propose(m, now=self.t)
         finally:
@@ -181,12 +183,15 @@ class MatchRuntime:
 
     async def approve(self, pid: str, edited_text: str | None = None, auto: bool = False) -> Proposal:
         p = self._pending(pid)
-        if edited_text is not None and edited_text.strip() and edited_text != p.overlay.body:
-            self._log("edited", self.t, pid, {"before": p.overlay.body, "after": edited_text})
+        # Edit whichever text the overlay actually shows: the body of a lower third, else the title.
+        field = "body" if p.overlay.kind == "lower_third" else "title"
+        before = getattr(p.overlay, field)
+        if edited_text is not None and edited_text.strip() and edited_text != before:
+            self._log("edited", self.t, pid, {"field": field, "before": before, "after": edited_text})
             errors = verify_text(edited_text, self.stats, self.t, facts=p.moment.stats)
             if errors:
                 self._log("override", self.t, pid, {"errors": errors})
-            p.overlay.body = edited_text
+            setattr(p.overlay, field, edited_text)
         p.status = "approved"
         self._log("approved", self.t, pid, {"by": "auto" if auto else "producer"})
         p.status = "aired"

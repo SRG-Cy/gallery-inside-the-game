@@ -64,14 +64,30 @@ def _close(claimed: float, actual: float) -> bool:
     return abs(float(claimed) - float(actual)) <= tol
 
 
+_WORD = re.compile(r"[\wÁÉÍÓÚÑáéíóúñ'’-]+")
+
+
+def _is_cap(word: str) -> bool:
+    return re.fullmatch(_CAP, word) is not None
+
+
 def unknown_names(text: str) -> list[str]:
-    bad = []
-    for run in _NAME_RUN.findall(text):
-        words = [_strip_possessive(w) for w in run.split()]
-        for a, b in zip(words, words[1:]):
-            if a not in _ALLOWED and b not in _ALLOWED:
-                bad.append(f"{a} {b}")
-    return bad
+    """Capitalised words that are not a known player, club or common word. A sentence's first word
+    is only suspicious when the next word is also an unknown capitalised word ("Marcus Fields")."""
+    bad: list[str] = []
+    for sentence in re.split(r"(?<=[.!?:])\s+", text):
+        words = [_strip_possessive(w) for w in _WORD.findall(sentence)]
+        for i, w in enumerate(words):
+            if not _is_cap(w) or w in _ALLOWED:
+                continue
+            if i == 0:
+                nxt = words[1] if len(words) > 1 else ""
+                if _is_cap(nxt) and nxt not in _ALLOWED:
+                    bad.append(f"{w} {nxt}")
+                continue
+            if not (i == 1 and bad and bad[-1].endswith(f" {w}")):
+                bad.append(w)
+    return list(dict.fromkeys(bad))
 
 
 def future_minutes(text: str, now: float) -> list[int]:
@@ -101,6 +117,8 @@ def verify(insight: Insight, stats: StatsEngine, now: float, facts: dict | None 
     for text in texts:
         errors += [f"unknown person '{n}'" for n in unknown_names(text)]
         errors += [f"minute {m}' is in the future" for m in future_minutes(text, now)]
+    prose = f"{insight.headline}. {insight.why_it_matters}"
+    errors += [e for e in verify_text(prose, stats, now, facts) if e.startswith("number")]
     for eid in insight.evidence_event_ids:
         e = stats.by_id.get(eid)
         if e is None or e.t > now:

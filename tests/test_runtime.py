@@ -1,8 +1,13 @@
+import asyncio
+
 import pytest
 
 from gallery.agents.crew import Crew
 from gallery.audit import Audit
 from gallery.runtime import Conflict, MatchRuntime
+from gallery.sim.engine import simulate
+from gallery.stats.detectors import Detectors
+from gallery.stats.engine import StatsEngine
 from tests.fakes import FakeLLM
 
 
@@ -98,7 +103,8 @@ async def test_edit_with_wrong_number_logged_override():
     await step_until(rt, lambda: pending(rt))
     pid = pending(rt)[0].id
     p = await rt.approve(pid, edited_text="Northgate FC have had 999 shots.")
-    assert p.status == "aired" and p.overlay.body == "Northgate FC have had 999 shots."
+    shown = p.overlay.body if p.overlay.kind == "lower_third" else p.overlay.title
+    assert p.status == "aired" and shown == "Northgate FC have had 999 shots."
     kinds = [r["kind"] for r in rt.audit.all(rt.match_id) if r["proposal_id"] == pid]
     assert "edited" in kinds and "override" in kinds
 
@@ -167,3 +173,60 @@ async def test_no_momentum_swing_in_first_ten_minutes():
     await step_until(rt, lambda: rt.t >= 15 * 60)
     await rt.drain()
     assert all(p.moment.t >= 600 for p in rt.proposals.values() if p.moment.kind == "momentum_swing")
+
+
+async def test_new_proposal_during_expiry_broadcast_does_not_kill_loop():
+    rt, _ = make_runtime()
+    await rt.start(seed=7, speed=30, autorun=False)
+    await step_until(rt, lambda: len(pending(rt)) >= 2)
+    for p in pending(rt):
+        p.expires_at = rt.t - 1
+    extra = pending(rt)[0].model_copy(update={"id": "late-arrival", "expires_at": rt.t + 999})
+
+    async def broadcast(msg):
+        await asyncio.sleep(0)
+        rt.proposals.setdefault("late-arrival", extra)
+    rt.broadcast = broadcast
+    await rt.step()  # must not raise "dictionary changed size during iteration"
+    assert rt.proposals["late-arrival"].status == "pending"
+
+
+async def test_overlapping_starts_leave_one_loop():
+    async def yielding(msg):
+        await asyncio.sleep(0)
+    rt = MatchRuntime(lambda stats: Crew(FakeLLM(default="x"), stats), Audit(":memory:"), yielding)
+    rt.tick_wall = 0.01
+    await asyncio.gather(rt.start(7, 30), rt.start(7, 30))
+    loops = [t for t in asyncio.all_tasks() if t.get_coro().__qualname__ == "MatchRuntime._loop" and not t.done()]
+    assert len(loops) == 1
+    await rt.stop()
+    await asyncio.sleep(0)
+    assert not [t for t in asyncio.all_tasks() if t.get_coro().__qualname__ == "MatchRuntime._loop" and not t.done()]
+
+
+async def test_in_flight_cap_holds_within_one_tick():
+    rt, _ = make_runtime()
+    await rt.start(seed=7, speed=30, autorun=False)
+    stats = StatsEngine()
+    det = Detectors(stats)
+    llm_moments = []
+    for e in simulate(7):
+        stats.ingest(e)
+        llm_moments += [m for m in det.check(e) if m.kind in ("big_chance", "tactical_shift")]
+        if len(llm_moments) >= 6:
+            break
+    for m in llm_moments[:6]:
+        rt._schedule(m)
+    assert rt.in_flight == 3
+    assert sum(r["kind"] == "dropped" for r in rt.audit.all(rt.match_id)) == 3
+    await rt.drain()
+    assert rt.in_flight == 0
+
+
+async def test_edit_changes_title_for_player_tag():
+    rt, _ = make_runtime()
+    await rt.start(seed=7, speed=30, autorun=False)
+    await step_until(rt, lambda: any(p.overlay.kind == "player_tag" for p in pending(rt)))
+    p = next(p for p in pending(rt) if p.overlay.kind == "player_tag")
+    await rt.approve(p.id, edited_text="Fastest shot of the half")
+    assert rt.on_air[-1]["overlay"]["title"] == "Fastest shot of the half"

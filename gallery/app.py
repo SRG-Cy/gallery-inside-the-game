@@ -146,8 +146,8 @@ def create_app(settings: Settings | None = None, llm: LLM | None = None) -> Fast
     @app.websocket("/ws")
     async def ws(socket: WebSocket):
         await socket.accept()
+        hub.clients.add(socket)  # join first so nothing broadcast during the snapshot send is lost
         await socket.send_json({"type": "snapshot", **runtime.snapshot()})
-        hub.clients.add(socket)
         try:
             while True:
                 await socket.receive_text()

@@ -30,6 +30,7 @@ class Crew:
     def __init__(self, llm: LLM, stats: StatsEngine):
         self.llm = llm
         self.stats = stats
+        self._seq = 0
 
     async def _call(self, trace: list[dict], agent: str, instructions: str, prompt: str, tools=()):
         start = time.perf_counter()
@@ -72,7 +73,7 @@ class Crew:
             overlay = Overlay(kind=data["kind"], title=data["title"], body=data["body"],
                               stats=[tuple(map(str, s)) for s in data.get("stats", [])][:3],
                               t_start=m.t, duration_s=12 if m.kind == "goal" else 8)
-            shown = " ".join([overlay.title, overlay.body] + [v for _, v in overlay.stats])
+            shown = ". ".join([overlay.title, overlay.body] + [f"{k}: {v}" for k, v in overlay.stats])
             errors = verify_text(shown, frozen, m.t, facts=m.stats)
         except (ValueError, KeyError, TypeError, ValidationError) as exc:
             overlay, errors = None, [f"reply was not valid overlay JSON: {str(exc)[:200]}"]
@@ -93,7 +94,8 @@ class Crew:
             insight = templates.insight_for(m, frozen)
             overlay = templates.overlay_for(m, insight)
             trace.append({"agent": "template", "ms": 0, "ok": True})
-        return Proposal(id=f"p-{int(m.t)}-{m.kind}-{m.team or 'x'}", moment=m, insight=insight,
+        self._seq += 1
+        return Proposal(id=f"p-{int(m.t)}-{m.kind}-{m.team or 'x'}-{self._seq}", moment=m, insight=insight,
                         overlay=overlay, source=source, verified=True, expires_at=now + SHELF_LIFE,
                         trace=trace)
 

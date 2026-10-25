@@ -93,3 +93,16 @@ def test_template_insight_always_verifies():
             assert all(verify_text(text, s, s.now, facts=m.stats) == [] for text in v.values()), v
             checked += 1
     assert checked > 20
+
+
+def test_verify_checks_numbers_in_headline_and_why(first_half):
+    i = insight([], headline="Northgate have 97 shots", why="They lead 9-0 with 812 passes.")
+    errors = verify(i, first_half, first_half.now)
+    assert any("97" in e for e in errors) and any("812" in e for e in errors)
+
+
+def test_single_unknown_name_mid_sentence_is_flagged(first_half):
+    i = insight([], why="Northgate keep losing the ball to Messi in midfield.")
+    assert any("Messi" in e for e in verify(i, first_half, first_half.now))
+    ok = insight([], headline="Goal: Idris Okafor scores", why="So close! Harbour Athletic nearly level.")
+    assert verify(ok, first_half, first_half.now) == []

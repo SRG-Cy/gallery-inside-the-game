@@ -128,3 +128,29 @@ async def test_recap_falls_back_to_template(surge):
     llm = FakeLLM({"recap": [RuntimeError("down")]})
     text = await Crew(llm, stats).recap([], stats.snapshot(), "HT")
     assert "Northgate FC" in text and "Harbour Athletic" in text
+
+
+async def test_unverified_prose_with_failed_graphics_never_airs(surge):
+    stats, m = surge
+    bad = json.dumps({"headline": "Northgate have 97 shots", "why_it_matters": "They lead 9-0 with 812 passes.",
+                      "claims": [], "evidence_event_ids": m.evidence_event_ids[:1]})
+    llm = FakeLLM({"analyst": [bad, bad], "graphics": ["garbage"]})
+    p = await Crew(llm, stats).propose(m, now=m.t)
+    assert p.source == "template" and "97" not in p.overlay.title + p.overlay.body
+
+
+async def test_graphics_stat_labels_are_verified(surge):
+    stats, m = surge
+    gfx = json.dumps({"kind": "stat_card", "title": "The press is on", "body": "Winning it back high.",
+                      "stats": [["Rossi Bianchi 4 goals", str(m.stats["rate_per_min"])]]})
+    llm = FakeLLM({"analyst": [analyst_reply(m, m.stats["rate_per_min"])], "graphics": [gfx]})
+    p = await Crew(llm, stats).propose(m, now=m.t)
+    assert all("Rossi" not in label for label, _ in p.overlay.stats)
+
+
+async def test_proposal_ids_unique_for_same_second_moments(surge):
+    stats, m = surge
+    crew = Crew(FakeLLM(), stats)
+    s1 = await crew.propose(first_moment("speed")[1], now=0)
+    s2 = await crew.propose(first_moment("speed")[1], now=0)
+    assert s1.id != s2.id
