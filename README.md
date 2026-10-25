@@ -8,7 +8,8 @@ Built for the Microsoft x Premier League **Inside the Game: Developer Hackathon*
 
 > All clubs (Northgate FC, Harbour Athletic), players and matches are synthetic. No real league data, footage or trademarks are used.
 
-- **Live demo:** _added after deployment_
+- **Live demo:** https://gallery.livelywave-ba42e696.westus2.azurecontainerapps.io/ (Azure Container Apps). Pick a match, press **Start match**, and choose 15× or 30× speed. The demo replays the agent crew's recorded Microsoft Foundry replies, so it is fast and free to run. The first load after a quiet spell can take a few seconds while the app wakes up.
+- **MCP endpoint:** `https://gallery.livelywave-ba42e696.westus2.azurecontainerapps.io/mcp`
 - **Demo video:** _added after recording_
 
 ## Why a producer's desk?
