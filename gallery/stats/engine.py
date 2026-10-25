@@ -35,6 +35,13 @@ class StatsEngine:
         self.events.append(e)
         self.by_id[e.id] = e
 
+    def frozen(self) -> "StatsEngine":
+        """A copy that stops at the current event, for agents working while play continues."""
+        copy = StatsEngine()
+        copy.events = list(self.events)
+        copy.by_id = dict(self.by_id)
+        return copy
+
     @property
     def now(self) -> float:
         return self.events[-1].t if self.events else 0.0
