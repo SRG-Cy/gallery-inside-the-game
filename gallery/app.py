@@ -4,12 +4,14 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
+from mcp.server.transport_security import TransportSecuritySettings
 from pydantic import BaseModel
 
 from gallery.agents.crew import Crew
 from gallery.audit import Audit
 from gallery.config import Settings, load_settings
 from gallery.llm import LLM, make_llm
+from gallery.mcp_server import make_mcp
 from gallery.runtime import SPEEDS, Conflict, MatchRuntime
 from gallery.sim.squads import SQUADS
 
@@ -60,9 +62,16 @@ def create_app(settings: Settings | None = None, llm: LLM | None = None) -> Fast
     runtime = MatchRuntime(lambda stats: Crew(llm, stats), Audit(settings.db_path), hub.broadcast,
                            provider=settings.provider)
 
+    mcp = make_mcp(runtime)
+    # Read-only public data, served from a cloud host name, so host-header pinning is off.
+    mcp_app = mcp.streamable_http_app(
+        streamable_http_path="/mcp", stateless_http=True, json_response=True,
+        transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False))
+
     @asynccontextmanager
     async def lifespan(_app):
-        yield
+        async with mcp.session_manager.run():
+            yield
         await runtime.stop()
 
     app = FastAPI(title="Gallery", lifespan=lifespan)
@@ -153,6 +162,8 @@ def create_app(settings: Settings | None = None, llm: LLM | None = None) -> Fast
                 await socket.receive_text()
         except WebSocketDisconnect:
             hub.clients.discard(socket)
+
+    app.router.routes.extend(mcp_app.routes)  # POST /mcp: MCP streamable HTTP
 
     if WEB_DIR.exists():
         app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")

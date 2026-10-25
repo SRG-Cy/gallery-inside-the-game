@@ -4,7 +4,8 @@
     {
       "name": "gallery",
       "runtimeExecutable": "C:/Users/sreer/.venvs/gallery/Scripts/python.exe",
-      "runtimeArgs": ["-m", "uvicorn", "gallery.app:create_app", "--factory", "--port", "8000"],
+      "runtimeArgs": ["-m", "uvicorn", "gallery.app:create_app", "--factory", "--port", "8000", "--app-dir", "C:/Users/sreer/PremireLeague_Hack"],
+      "cwd": "C:/Users/sreer/PremireLeague_Hack",
       "port": 8000
     }
   ]

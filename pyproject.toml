@@ -9,6 +9,7 @@ dependencies = [
     "uvicorn[standard]>=0.29",
     "agent-framework-core>=1.23",
     "agent-framework-openai>=1.23",
+    "mcp>=2.3",
 ]
 
 [project.optional-dependencies]

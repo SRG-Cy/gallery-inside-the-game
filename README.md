@@ -19,6 +19,7 @@ Most AI sports demos talk straight to fans. Real broadcasts don't work that way:
 - **Humans keep control.** Insights wait for approval. Only low-risk items (player speed tags) can be set to auto-air. Edits are re-checked, and an edit that adds unverified content still airs but is logged as an *override*.
 - **Everything is auditable.** Moments, each agent step with its latency, verifier results, approvals, edits, overrides, rejections with reasons, and expiries. Export it from the console or at `GET /api/audit`.
 - **Machine-readable output.** Aired overlays are available with their timing at `GET /api/overlays` and stream over the WebSocket, ready for a graphics renderer.
+- **Open to other agents.** A read-only MCP server at `/mcp` gives a broadcaster's own AI agents the same verified match data Gallery's crew uses.
 
 ## The five stages, mapped to code
 
@@ -54,6 +55,21 @@ flowchart LR
 - **Replay cache:** every model reply is cached by request hash. `GALLERY_PROVIDER=replay` replays a recorded match at zero cost and with deterministic output, which makes demos and judging reliable.
 - **Resilience:** 8-second timeout, back-off on rate limits (the provider badge turns amber and templates take over), crew concurrency cap, proposals expire when stale, and clients that reconnect mid-match get a full snapshot.
 - **Hosting:** one container on **Azure Container Apps** (scales to zero).
+
+## Plug in your own agents (MCP)
+
+Gallery serves a read-only [Model Context Protocol](https://modelcontextprotocol.io) endpoint at `/mcp` (streamable HTTP, stateless). Any MCP client, such as GitHub Copilot agent mode, Claude, or a Foundry agent, can connect and call:
+
+| Tool | Returns |
+|---|---|
+| `get_match_state` | Score, clock and both teams' statistics |
+| `get_team_stats(team)` | One team's statistics (`NOR` or `HAR`) |
+| `get_player_stats(player_id)` | One player's statistics, for example `NOR-6` |
+| `compare_windows(team, minutes)` | The last N minutes against the N before |
+| `list_on_air` | Overlays the producer has aired, with timing |
+| `list_players` | Both squads with ids and positions |
+
+Every tool is marked read-only. Nothing over MCP can change the match, the queue or the audit trail.
 
 ## Run it locally
 
@@ -102,5 +118,10 @@ az containerapp up --name gallery --resource-group gallery-rg --location <region
 
 - **Microsoft Foundry:** model deployment for every agent
 - **Microsoft Agent Framework:** agents, function tools, chat client
+- **Model Context Protocol:** read-only match data for external agents
 - **Azure Container Apps:** hosting, scale to zero
 - **GitHub Models:** free development endpoint
+
+## License
+
+MIT. See [LICENSE](LICENSE).
