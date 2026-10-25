@@ -1,0 +1,9 @@
+.git
+.env
+.superpowers
+.claude
+**/__pycache__
+.pytest_cache
+*.db
+tests
+docs
